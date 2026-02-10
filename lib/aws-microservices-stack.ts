@@ -5,19 +5,15 @@ import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-node
 import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import { join } from 'path';
+import { EcommerceDatabase } from './database';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class AwsMicroservicesStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // Product table dynamo db
-    const productTable = new Table(this, 'product', {
-      partitionKey: { name: 'id', type: AttributeType.STRING },
-      tableName: 'product',
-      removalPolicy: RemovalPolicy.DESTROY,
-      billingMode: BillingMode.PAY_PER_REQUEST,
-    });
+    // Database construct
+    const database = new EcommerceDatabase(this, 'Database');
 
     // Product lambda function
     const nodeJsFunctionProps : NodejsFunctionProps = {
@@ -29,7 +25,7 @@ export class AwsMicroservicesStack extends Stack {
       },
       environment: {
         PRIMARY_KEY: 'id',
-        DYNAMO_TABLE_NAME: productTable.tableName
+        DYNAMO_TABLE_NAME: database.productTable.tableName
       }
     };
 
@@ -37,7 +33,7 @@ export class AwsMicroservicesStack extends Stack {
       ...nodeJsFunctionProps,
       entry: join(__dirname, '../src/product/index.js')
     });
-    productTable.grantReadWriteData(productFunction);
+    database.productTable.grantReadWriteData(productFunction);
 
     // Product API Gateway
     const apigw = new LambdaRestApi(this, 'productApi', {
