@@ -6,6 +6,7 @@ import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { EcommerceDatabase } from './database';
+import { EcommerceMicroservices } from './microservices';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class AwsMicroservicesStack extends Stack {
@@ -15,30 +16,16 @@ export class AwsMicroservicesStack extends Stack {
     // Database construct
     const database = new EcommerceDatabase(this, 'Database');
 
-    // Product lambda function
-    const nodeJsFunctionProps : NodejsFunctionProps = {
-      runtime: Runtime.NODEJS_24_X,
-      bundling: {
-        externalModules: [
-          'aws-sdk', // Exclude AWS SDK since it's available in the Lambda runtime
-        ],
-      },
-      environment: {
-        PRIMARY_KEY: 'id',
-        DYNAMO_TABLE_NAME: database.productTable.tableName
-      }
-    };
-
-    const productFunction = new NodejsFunction(this, 'productLambdaFunction', {
-      ...nodeJsFunctionProps,
-      entry: join(__dirname, '../src/product/index.js')
+    // Microservices construct (Lambda functions)
+    const microservices = new EcommerceMicroservices(this, 'Microservices', {
+        productTable: database.productTable
     });
-    database.productTable.grantReadWriteData(productFunction);
+
 
     // Product API Gateway
     const apigw = new LambdaRestApi(this, 'productApi', {
       restApiName: 'Product Service',
-      handler: productFunction,
+      handler: microservices.productMicroservice,
       proxy: false
     });
 
