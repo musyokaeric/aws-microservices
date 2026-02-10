@@ -1,13 +1,8 @@
-import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
-import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
-import { Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
-import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
+import { Stack, StackProps } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
-import { join } from 'path';
 import { EcommerceDatabase } from './database';
 import { EcommerceMicroservices } from './microservices';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { EcommerceApiGateway } from './apigateway';
 
 export class AwsMicroservicesStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -21,21 +16,9 @@ export class AwsMicroservicesStack extends Stack {
         productTable: database.productTable
     });
 
-
-    // Product API Gateway
-    const apigw = new LambdaRestApi(this, 'productApi', {
-      restApiName: 'Product Service',
-      handler: microservices.productMicroservice,
-      proxy: false
+    // API Gateway construct
+    const apiGateway = new EcommerceApiGateway(this, 'ApiGateway', {
+        productMicroservice: microservices.productMicroservice
     });
-
-    const product = apigw.root.addResource('product'); // /product
-    product.addMethod('GET'); // GET /product
-    product.addMethod('POST'); // POST /product
-
-    const singleProduct = product.addResource('{id}'); // /product/{id}
-    singleProduct.addMethod('GET'); // GET /product/{id}
-    singleProduct.addMethod('PUT'); // PUT /product/{id}
-    singleProduct.addMethod('DELETE'); // DELETE /product/{id}
   }
 }
