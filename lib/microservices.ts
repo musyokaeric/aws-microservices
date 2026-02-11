@@ -60,7 +60,10 @@ export class EcommerceMicroservices extends Construct {
             },
             environment: {
                 PRIMARY_KEY: 'userName',
-                DYNAMO_TABLE_NAME: basketTable.tableName
+                DYNAMO_TABLE_NAME: basketTable.tableName,
+                EVENT_BUSNAME: 'EcommerceEventBus',
+                EVENT_SOURCE: 'com.ecommerce.basket.checkout',
+                EVENT_DETAILTYPE: 'CheckoutBasket'
             }
         };
         
