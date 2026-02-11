@@ -7,21 +7,25 @@ import { join } from "path";
 interface EcommerceMicroservicesProps {
     productTable: ITable;
     basketTable: ITable;
+    orderTable: ITable;
 }
 
 export class EcommerceMicroservices extends Construct {
     
     public readonly productMicroservice: NodejsFunction;
     public readonly basketMicroservice: NodejsFunction;
+    public readonly orderingMicroservice: NodejsFunction;
 
 
-    constructor(scope: Construct, id: string, { productTable, basketTable }: EcommerceMicroservicesProps) {
+    constructor(scope: Construct, id: string, { productTable, basketTable, orderTable }: EcommerceMicroservicesProps) {
         super(scope, id);
 
         // Product lambda function
         this.productMicroservice = this.createProductFunction(productTable);
         // Basket lambda function
         this.basketMicroservice = this.createBasketFunction(basketTable);
+        // Ordering lambda function
+        this.orderingMicroservice = this.createOrderingFunction(orderTable);
     }
 
     createProductFunction(productTable: ITable) : NodejsFunction {
@@ -66,5 +70,27 @@ export class EcommerceMicroservices extends Construct {
         });
         basketTable.grantReadWriteData(basketFunction);
         return basketFunction;
+    }
+
+    createOrderingFunction(orderTable: ITable) : NodejsFunction {
+        const orderingFunctionProps : NodejsFunctionProps = {
+            runtime: Runtime.NODEJS_24_X,
+            bundling: {
+                externalModules: [
+                    'aws-sdk', // Exclude AWS SDK since it's available in the Lambda runtime
+                ],
+            },
+            environment: {
+                PRIMARY_KEY: 'userName',
+                SORT_KEY: 'orderDate',
+                DYNAMO_TABLE_NAME: orderTable.tableName
+            }
+        };
+        const orderingFunction = new NodejsFunction(this, 'orderingLambdaFunction', {
+            ...orderingFunctionProps,
+            entry: join(__dirname, '../src/ordering/index.js')
+        });
+        orderTable.grantReadWriteData(orderingFunction);
+        return orderingFunction;
     }
 }
