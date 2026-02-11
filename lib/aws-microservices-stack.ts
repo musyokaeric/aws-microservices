@@ -25,5 +25,11 @@ export class AwsMicroservicesStack extends Stack {
         basketMicroservice: microservices.basketMicroservice,
         orderingMicroservice: microservices.orderingMicroservice
     });
+
+    // Eventbus construct
+    const eventBus = new EcommerceEventBus(this, 'EventBus', {
+        publisherFunction: microservices.basketMicroservice,
+        subscriberFunction: microservices.orderingMicroservice
+    });
   }
 }
