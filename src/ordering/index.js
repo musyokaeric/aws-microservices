@@ -1,6 +1,6 @@
-import { PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { PutItemCommand, QueryCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import dynamoDbClient from "./dynamoDbClient";
-import { marshall } from "@aws-sdk/util-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
 exports.handler = async function (event) {
     console.log("Received event:", JSON.stringify(event, null, 2));
@@ -10,7 +10,7 @@ exports.handler = async function (event) {
     if (eventType) {
         await eventBridgeInvocation(event);
     } else {
-        await apiGatewayInvocation(event);
+        return await apiGatewayInvocation(event);
     }
 }
 
@@ -18,11 +18,6 @@ const eventBridgeInvocation = async (event) => {
     console.log("Processing EventBridge Invocation");
     // TODO - Process EventBridge Invocation
     await createOrder(event.detail);
-}
-
-const apiGatewayInvocation = async (event) => {
-    console.log("Processing API Gateway Invocation");
-    // TODO - Process API Gateway Invocation
 }
 
 const createOrder = async (basketCheckoutEvent) => {
@@ -45,5 +40,88 @@ const createOrder = async (basketCheckoutEvent) => {
     } catch (error) {
         console.error("Error creating order:", error);
         throw error;
+    }
+}
+
+const apiGatewayInvocation = async (event) => {
+    console.log("Processing API Gateway Invocation");
+    // TODO - Process API Gateway Invocation
+
+    let body;
+    try {
+        switch (event.httpMethod) {
+            case 'GET':
+                if (event.pathParameters !== null) {
+                    body = await getOrder(event)
+                } else {
+                    body = await getAllOrders()
+                }
+                break;
+            default:
+                throw new Error(`Unsupported method "${event.httpMethod}"`);
+        }
+
+        console.log(body)
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: `Successfully performed operation for ${event.httpMethod} ${event.path}`,
+                body: body
+            }),
+        };
+    } catch (error) {
+        console.error('Error processing event:', error)
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                message: 'Failed to perform operation. Please check the logs for more details.',
+                errorMessage: error.message,
+                errorStack: error.stack
+            }),
+        }
+    }
+}
+
+const getOrder = async (event) => {
+    // TODO - implement getOrder function to retrieve an order by orderId from DynamoDB
+    console.log('getOrder')
+
+    try {
+        const userName = event.pathParameters.userName;
+        const orderDate = event.queryStringParameters.orderDate;
+
+        const params = {
+            KeyConditionExpression: 'userName = :userName AND orderDate = :orderDate',
+            ExpressionAttributeValues: {
+                ':userName': { S: userName },
+                ':orderDate': { S: orderDate }
+            },
+            TableName: process.env.DYNAMO_TABLE_NAME
+        };
+
+        const { Items } = await dynamoDbClient.send(new QueryCommand(params));
+        console.log(Items)
+        return Items ? Items.map(item => unmarshall(item)) : {}
+    } catch (error) {
+        console.error('Error getting order:', error)
+        throw error
+    }
+}
+
+const getAllOrders = async (event) => {
+    // TODO - implement getAllOrders function to retrieve all orders from DynamoDB
+    console.log('getAllOrders')
+
+    try {
+        const params = {
+            TableName: process.env.DYNAMO_TABLE_NAME
+        }
+        const { Items } = await dynamoDbClient.send(new ScanCommand(params))
+        console.log(Items)
+        return Items ? Items.map(item => unmarshall(item)) : {}
+    } catch (error) {
+        console.error('Error getting all orders:', error)
+        throw error
     }
 }
