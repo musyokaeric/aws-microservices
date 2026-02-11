@@ -13,12 +13,14 @@ export class AwsMicroservicesStack extends Stack {
 
     // Microservices construct (Lambda functions)
     const microservices = new EcommerceMicroservices(this, 'Microservices', {
-        productTable: database.productTable
+        productTable: database.productTable,
+        basketTable: database.basketTable
     });
 
     // API Gateway construct
     const apiGateway = new EcommerceApiGateway(this, 'ApiGateway', {
-        productMicroservice: microservices.productMicroservice
+        productMicroservice: microservices.productMicroservice,
+        basketMicroservice: microservices.basketMicroservice
     });
   }
 }
