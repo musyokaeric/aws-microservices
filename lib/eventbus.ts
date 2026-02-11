@@ -1,16 +1,17 @@
 import { EventBus, Rule } from "aws-cdk-lib/aws-events";
-import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
+import { SqsQueue } from "aws-cdk-lib/aws-events-targets";
 import { IFunction } from "aws-cdk-lib/aws-lambda";
+import { IQueue } from "aws-cdk-lib/aws-sqs";
 import { Construct } from "constructs";
 
 interface EcommerceEventBusProps {
     // Fan-out with publisher/subscriber pattern
     publisherFunction: IFunction;
-    subscriberFunction: IFunction; 
+    targetQueue: IQueue; 
 }
 
 export class EcommerceEventBus extends Construct {
-    constructor(scope: Construct, id: string, {publisherFunction, subscriberFunction}: EcommerceEventBusProps) {
+    constructor(scope: Construct, id: string, {publisherFunction, targetQueue}: EcommerceEventBusProps) {
         super(scope, id);
 
         const eventBus = new EventBus(this, 'EventBus', {
@@ -30,7 +31,7 @@ export class EcommerceEventBus extends Construct {
         });
 
         // Add targets to the rule if needed
-        checkoutBasketRule.addTarget(new LambdaFunction(subscriberFunction));
+        checkoutBasketRule.addTarget(new SqsQueue(targetQueue));
 
         // Grant permissions to the publisher function to put events on the event bus
         eventBus.grantPutEventsTo(publisherFunction);

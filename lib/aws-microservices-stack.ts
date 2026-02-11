@@ -4,6 +4,7 @@ import { EcommerceDatabase } from './database';
 import { EcommerceMicroservices } from './microservices';
 import { EcommerceApiGateway } from './apigateway';
 import { EcommerceEventBus } from './eventbus';
+import { EcommerceQueue } from './queue';
 
 export class AwsMicroservicesStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -26,10 +27,15 @@ export class AwsMicroservicesStack extends Stack {
         orderingMicroservice: microservices.orderingMicroservice
     });
 
+    // SQS Queue construct
+    const queue = new EcommerceQueue(this, 'Queue', {
+      consumer: microservices.orderingMicroservice
+    })
+
     // Eventbus construct
     const eventBus = new EcommerceEventBus(this, 'EventBus', {
         publisherFunction: microservices.basketMicroservice,
-        subscriberFunction: microservices.orderingMicroservice
+        targetQueue: queue.orderQueue
     });
   }
 }
