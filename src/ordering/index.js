@@ -3,14 +3,37 @@ import dynamoDbClient from "./dynamoDbClient";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
 exports.handler = async function (event) {
-    console.log("Received event:", JSON.stringify(event, null, 2));
     // TODO - Catch and process async EventBridge Invocation and Sync API Gateway Invocation
 
-    const eventType = event['detail-type'];
-    if (eventType) {
+    if (event.Records !== undefined) {
+        // SQS Invocation
+        console.log("Event.Records: ", JSON.stringify(event.Records))
+        await sqsInvocation(event)
+    } else if (event['detail-type'] !== undefined) {
+        // EventBridge Invocation
+        console.log("Event['detail-type']: ", JSON.stringify(event['detail-type']))
         await eventBridgeInvocation(event);
     } else {
+        // API Gateway Invocation
+        console.log("Received event:", JSON.stringify(event, null, 2));
         return await apiGatewayInvocation(event);
+    }
+}
+
+const sqsInvocation = async (event) => {
+    console.log("Processing SQS Invocation");
+    // TODO - Process SQS Invocation
+
+    for (const record of event.Records) {
+        console.log('Record %j', record)
+
+        // expected request : { "detail-type\": \"CheckoutBasket\", \"source\": \"com.ecommerce.basket.checkout\", ... }
+        const checkoutEventRequest = JSON.parse(record.body);
+
+        // create order item into db
+        await createOrder(checkoutEventRequest.detail)
+            .then(response => console.log(response))
+            .catch(error => console.error(error))
     }
 }
 
